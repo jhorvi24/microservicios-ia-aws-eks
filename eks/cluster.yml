@@ -1,0 +1,34 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: customer-analysis-cluster
+  region: us-east-1
+  version: "1.35"
+
+# AWS Academy: Use LabRole for cluster and nodes
+iam:
+  serviceRoleARN: arn:aws:iam::022655255269:role/c193145a4965754l14067981t1w022655-LabEksClusterRole-jZdP9D4JDiTE
+
+managedNodeGroups:
+  - name: ai-nodes
+    instanceType: t3.large
+    desiredCapacity: 3
+    minSize: 3
+    maxSize: 5
+    volumeSize: 30
+    # AWS Academy: Use LabRole for node group
+    iam:
+      instanceRoleARN: arn:aws:iam::022655255269:role/c193145a4965754l14067981t1w022655255-LabEksNodeRole-mymbVXDw47Zg
+    tags:
+      Project: AI-Cluster
+      Environment: Lab
+
+# Addons
+addons:
+  - name: vpc-cni
+    version: latest
+  - name: coredns
+    version: latest
+  - name: kube-proxy
+    version: latest

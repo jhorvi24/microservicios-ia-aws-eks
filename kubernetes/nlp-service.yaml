@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nlp-service
+  labels:
+    app: nlp-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nlp-service
+  template:
+    metadata:
+      labels:
+        app: nlp-service
+    spec:
+      containers:
+      - name: nlp-service
+        image: 022655255269.dkr.ecr.us-east-1.amazonaws.com/nlp-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: BD_SERVICE_URL
+          value: "http://data-service:8001"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nlp-service
+spec:
+  type: ClusterIP
+  selector:
+    app: nlp-service
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
