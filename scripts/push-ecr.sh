@@ -50,4 +50,4 @@ done
 
 echo ""
 echo "=== All images pushed successfully ==="
-echo "You can now deploy to EKS: kubectl apply -f k8s/deployments/"
+echo "You can now deploy to EKS: kubectl apply -f k8s/"

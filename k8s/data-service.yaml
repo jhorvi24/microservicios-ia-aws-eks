@@ -16,13 +16,13 @@ spec:
     spec:
       containers:
       - name: data-service
-        image: 022655255269.dkr.ecr.us-east-1.amazonaws.com/data-service:latest
+        image: 471112964070.dkr.ecr.us-east-1.amazonaws.com/data-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8001
         env:
         - name: DATABASE_URL
-          value: "postgresql://postgres:postgres123@sentiments-db.c1cg6my0wm53.us-east-1.rds.amazonaws.com:5432/sentiments"
+          value: "postgresql://postgres:postgres123@sentiments-db.cb404oqs8bkt.us-east-1.rds.amazonaws.com:5432/sentiments"
         resources:
           requests:
             memory: "256Mi"

@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: dashboard
-        image: 022655255269.dkr.ecr.us-east-1.amazonaws.com/dashboard:latest
-        imagePullPolicy: IfNotPresent
+        image: 471112964070.dkr.ecr.us-east-1.amazonaws.com/dashboard:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8501
         env:

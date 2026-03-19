@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: nlp-service
-        image: 022655255269.dkr.ecr.us-east-1.amazonaws.com/nlp-service:latest
+        image: 471112964070.dkr.ecr.us-east-1.amazonaws.com/nlp-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
