@@ -4,155 +4,115 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Services/**'
-      - 'k8s/**'
+    workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER: customer-analysis-cluster
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_ACCESS_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
-  # ─── Detectar qué servicios cambiaron ───────────────────────────────────────
-  changes:
-    name: Detect changed services
+  
+  build-and-push-dashboard-image:
     runs-on: ubuntu-latest
-    outputs:
-      nlp-service: ${{ steps.filter.outputs.nlp-service }}
-      data-service: ${{ steps.filter.outputs.data-service }}
-      dashboard: ${{ steps.filter.outputs.dashboard }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Filter changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            nlp-service:
-              - 'Services/nlp-service/**'
-            data-service:
-              - 'Services/data-service/**'
-            dashboard:
-              - 'Services/dashboard/**'
-
-  # ─── Build & Push — NLP Service ─────────────────────────────────────────────
-  build-nlp:
-    name: Build nlp-service
-    needs: changes
-    if: needs.changes.outputs.nlp-service == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+          
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push
-        run: |
-          docker build -t $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }} \
-                       -t $ECR_REGISTRY/nlp-service:latest \
-                       Services/nlp-service/
-          docker push $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }}
-          docker push $ECR_REGISTRY/nlp-service:latest
-
-  # ─── Build & Push — Data Service ────────────────────────────────────────────
-  build-data:
-    name: Build data-service
-    needs: changes
-    if: needs.changes.outputs.data-service == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push
-        run: |
-          docker build -t $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }} \
-                       -t $ECR_REGISTRY/data-service:latest \
-                       Services/data-service/
-          docker push $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }}
-          docker push $ECR_REGISTRY/data-service:latest
-
-  # ─── Build & Push — Dashboard ───────────────────────────────────────────────
-  build-dashboard:
-    name: Build dashboard
-    needs: changes
-    if: needs.changes.outputs.dashboard == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      
+      - name: Build, tag, and push dashboard image to Amazon ECR
+        id: build-image
         run: |
           docker build -t $ECR_REGISTRY/dashboard:${{ steps.meta.outputs.tag }} \
-                       -t $ECR_REGISTRY/dashboard:latest \
-                       Services/dashboard/
+            ./microservices/dashboard
           docker push $ECR_REGISTRY/dashboard:${{ steps.meta.outputs.tag }}
-          docker push $ECR_REGISTRY/dashboard:latest
 
-  # ─── Deploy a EKS ───────────────────────────────────────────────────────────
+     
+  build-data-service:
+    name: Build & Push data-service
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: meta
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build, tag and push data-service image
+        run: |
+          docker build -t $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }} \
+            ./microservices/data-service
+          docker push $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }}
+
+ 
+  build-nlp-service:
+    name: Build & Push nlp-service
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: meta
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build, tag and push nlp-service image
+        run: |
+          docker build -t $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }} \
+            ./microservices/nlp-service
+          docker push $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }}
+     
+
+      - name: Deploy to EKS cluster
+        run: |
+          kubectl set image deployment/customer-analysis-deployment customer-analysis-app=${{ steps.build-image.outputs.image }}
+
   deploy:
     name: Deploy to EKS
     runs-on: ubuntu-latest
-    needs: [changes, build-nlp, build-data, build-dashboard]
-    # Corre si al menos uno de los builds terminó (exitoso o skipped)
-    if: |
-      always() &&
-      (needs.build-nlp.result == 'success' || needs.build-nlp.result == 'skipped') &&
-      (needs.build-data.result == 'success' || needs.build-data.result == 'skipped') &&
-      (needs.build-dashboard.result == 'success' || needs.build-dashboard.result == 'skipped') &&
-      (needs.build-nlp.result == 'success' || needs.build-data.result == 'success' || needs.build-dashboard.result == 'success')
+    needs: [build-dashboard, build-data-service, build-nlp-service]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -160,32 +120,48 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Update kubeconfig
+      - name: Update kubeconfig for EKS
         run: |
-          aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER_NAME
 
-      - name: Deploy nlp-service
-        if: needs.changes.outputs.nlp-service == 'true'
+      - name: Update image tags in manifests
         run: |
-          kubectl set image deployment/nlp-service \
-            nlp-service=$ECR_REGISTRY/nlp-service:${{ github.sha }}
-          kubectl rollout status deployment/nlp-service --timeout=120s
+          IMAGE_TAG=${{ github.sha }}
+
+          # Dashboard
+          sed -i "s|image: .*dashboard.*|image: $ECR_REGISTRY/dashboard:$IMAGE_TAG|g" \
+            ./k8s/dashboard/deployment.yaml
+
+          # data-service
+          sed -i "s|image: .*data-service.*|image: $ECR_REGISTRY/data-service:$IMAGE_TAG|g" \
+            ./k8s/data-service/deployment.yaml
+
+          # nlp-service
+          sed -i "s|image: .*nlp-service.*|image: $ECR_REGISTRY/nlp-service:$IMAGE_TAG|g" \
+            ./k8s/nlp-service/deployment.yaml
+
+      - name: Deploy Dashboard
+        run: |
+          kubectl apply -f ./k8s/dashboard/
 
       - name: Deploy data-service
-        if: needs.changes.outputs.data-service == 'true'
         run: |
-          kubectl set image deployment/data-service \
-            data-service=$ECR_REGISTRY/data-service:${{ github.sha }}
-          kubectl rollout status deployment/data-service --timeout=120s
+          kubectl apply -f ./k8s/data-service/
 
-      - name: Deploy dashboard
-        if: needs.changes.outputs.dashboard == 'true'
+      - name: Deploy nlp-service
         run: |
-          kubectl set image deployment/dashboard \
-            dashboard=$ECR_REGISTRY/dashboard:${{ github.sha }}
+          kubectl apply -f ./k8s/nlp-service/
+
+      - name: Verify rollout
+        run: |
           kubectl rollout status deployment/dashboard --timeout=120s
+          kubectl rollout status deployment/data-service --timeout=120s
+          kubectl rollout status deployment/nlp-service --timeout=120s
 
-      - name: Verify pods
-        run: kubectl get pods -o wide
+      - name: Get LoadBalancer URL
+        run: |
+          echo "Dashboard URL:"
+          kubectl get svc dashboard -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
