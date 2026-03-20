@@ -3,7 +3,7 @@ name: CI/CD - Deploy to Amazon EKS
 on:
   push:
     branches:
-      - main
+      - ci-cd
   workflow_dispatch:
 
 env:
@@ -37,7 +37,7 @@ jobs:
             ./microservices/dashboard
           docker push $ECR_REGISTRY/dashboard:${{ github.sha }}
 
-  #data service
+  #data service conf
   build-data-service:
     name: Build & Push data-service
     runs-on: ubuntu-latest
