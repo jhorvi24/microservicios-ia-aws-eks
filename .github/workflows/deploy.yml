@@ -31,12 +31,13 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag and push Dashboard image
+      - name: Build, tag and push Dashboard image 
         run: |
           docker build -t $ECR_REGISTRY/dashboard:${{ github.sha }} \
             ./microservices/dashboard
           docker push $ECR_REGISTRY/dashboard:${{ github.sha }}
-
+          
+#data service
   build-data-service:
     name: Build & Push data-service
     runs-on: ubuntu-latest
