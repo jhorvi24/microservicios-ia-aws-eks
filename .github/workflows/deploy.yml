@@ -1,53 +1,45 @@
-name: CI/CD — Build & Deploy to EKS
+name: CI/CD - Deploy to Amazon EKS
 
 on:
   push:
     branches:
       - main
-    workflow_dispatch:
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER: customer-analysis-cluster
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_SESSION_ACCESS_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-  AWS_ACCOUNT_ID: 125474202777
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  EKS_CLUSTER_NAME: customer-analysis-cluster
+  ECR_REGISTRY: 125474202777.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
-  
-  build-and-push-dashboard-image:
+
+  build-dashboard:
+    name: Build & Push Dashboard
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      
-      - name: Build, tag, and push dashboard image to Amazon ECR
-        id: build-image
-        run: |
-          docker build -t $ECR_REGISTRY/dashboard:${{ steps.meta.outputs.tag }} \
-            ./microservices/dashboard
-          docker push $ECR_REGISTRY/dashboard:${{ steps.meta.outputs.tag }}
+        uses: aws-actions/amazon-ecr-login@v2
 
-     
+      - name: Build, tag and push Dashboard image
+        run: |
+          docker build -t $ECR_REGISTRY/dashboard:${{ github.sha }} \
+            ./microservices/dashboard
+          docker push $ECR_REGISTRY/dashboard:${{ github.sha }}
+
   build-data-service:
     name: Build & Push data-service
     runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,26 +50,20 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build, tag and push data-service image
         run: |
-          docker build -t $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }} \
+          docker build -t $ECR_REGISTRY/data-service:${{ github.sha }} \
             ./microservices/data-service
-          docker push $ECR_REGISTRY/data-service:${{ steps.meta.outputs.tag }}
+          docker push $ECR_REGISTRY/data-service:${{ github.sha }}
 
- 
   build-nlp-service:
     name: Build & Push nlp-service
     runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,24 +74,16 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set image tag
-        id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-
       - name: Build, tag and push nlp-service image
         run: |
-          docker build -t $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }} \
+          docker build -t $ECR_REGISTRY/nlp-service:${{ github.sha }} \
             ./microservices/nlp-service
-          docker push $ECR_REGISTRY/nlp-service:${{ steps.meta.outputs.tag }}
-     
-
-      - name: Deploy to EKS cluster
-        run: |
-          kubectl set image deployment/customer-analysis-deployment customer-analysis-app=${{ steps.build-image.outputs.image }}
+          docker push $ECR_REGISTRY/nlp-service:${{ github.sha }}
 
   deploy:
     name: Deploy to EKS
@@ -121,6 +99,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
 
       - name: Update kubeconfig for EKS
         run: |
@@ -132,29 +116,23 @@ jobs:
         run: |
           IMAGE_TAG=${{ github.sha }}
 
-          # Dashboard
           sed -i "s|image: .*dashboard.*|image: $ECR_REGISTRY/dashboard:$IMAGE_TAG|g" \
             ./k8s/dashboard/deployment.yaml
 
-          # data-service
           sed -i "s|image: .*data-service.*|image: $ECR_REGISTRY/data-service:$IMAGE_TAG|g" \
             ./k8s/data-service/deployment.yaml
 
-          # nlp-service
           sed -i "s|image: .*nlp-service.*|image: $ECR_REGISTRY/nlp-service:$IMAGE_TAG|g" \
             ./k8s/nlp-service/deployment.yaml
 
       - name: Deploy Dashboard
-        run: |
-          kubectl apply -f ./k8s/dashboard/
+        run: kubectl apply -f ./k8s/dashboard/
 
       - name: Deploy data-service
-        run: |
-          kubectl apply -f ./k8s/data-service/
+        run: kubectl apply -f ./k8s/data-service/
 
       - name: Deploy nlp-service
-        run: |
-          kubectl apply -f ./k8s/nlp-service/
+        run: kubectl apply -f ./k8s/nlp-service/
 
       - name: Verify rollout
         run: |
