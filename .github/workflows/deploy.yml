@@ -36,8 +36,8 @@ jobs:
           docker build -t $ECR_REGISTRY/dashboard:${{ github.sha }} \
             ./microservices/dashboard
           docker push $ECR_REGISTRY/dashboard:${{ github.sha }}
-          
-#data service
+
+  #data service
   build-data-service:
     name: Build & Push data-service
     runs-on: ubuntu-latest
