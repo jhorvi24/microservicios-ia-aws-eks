@@ -118,22 +118,22 @@ jobs:
           IMAGE_TAG=${{ github.sha }}
 
           sed -i "s|image: .*dashboard.*|image: $ECR_REGISTRY/dashboard:$IMAGE_TAG|g" \
-            ./k8s/dashboard/deployment.yaml
+            ./k8s/dashboard.yaml
 
           sed -i "s|image: .*data-service.*|image: $ECR_REGISTRY/data-service:$IMAGE_TAG|g" \
-            ./k8s/data-service/deployment.yaml
+            ./k8s/data-service.yaml
 
           sed -i "s|image: .*nlp-service.*|image: $ECR_REGISTRY/nlp-service:$IMAGE_TAG|g" \
-            ./k8s/nlp-service/deployment.yaml
+            ./k8s/nlp-service.yaml
 
       - name: Deploy Dashboard
-        run: kubectl apply -f ./k8s/dashboard/
+        run: kubectl apply -f ./k8s/dashboard.yml
 
       - name: Deploy data-service
-        run: kubectl apply -f ./k8s/data-service/
+        run: kubectl apply -f ./k8s/data-service.yml
 
       - name: Deploy nlp-service
-        run: kubectl apply -f ./k8s/nlp-service/
+        run: kubectl apply -f ./k8s/nlp-service.yml
 
       - name: Verify rollout
         run: |
