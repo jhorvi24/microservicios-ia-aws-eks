@@ -34,7 +34,7 @@ jobs:
       - name: Build, tag and push Dashboard image 
         run: |
           docker build -t $ECR_REGISTRY/dashboard:${{ github.sha }} \
-            ./microservices/dashboard
+            ./Services/dashboard
           docker push $ECR_REGISTRY/dashboard:${{ github.sha }}
 
   #data service configu
@@ -59,7 +59,7 @@ jobs:
       - name: Build, tag and push data-service image
         run: |
           docker build -t $ECR_REGISTRY/data-service:${{ github.sha }} \
-            ./microservices/data-service
+            ./Services/data-service
           docker push $ECR_REGISTRY/data-service:${{ github.sha }}
 
   build-nlp-service:
@@ -83,7 +83,7 @@ jobs:
       - name: Build, tag and push nlp-service image
         run: |
           docker build -t $ECR_REGISTRY/nlp-service:${{ github.sha }} \
-            ./microservices/nlp-service
+            ./Services/nlp-service
           docker push $ECR_REGISTRY/nlp-service:${{ github.sha }}
 
   deploy:
