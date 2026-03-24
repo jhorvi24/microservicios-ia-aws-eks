@@ -127,13 +127,13 @@ jobs:
             ./k8s/nlp-service.yaml
 
       - name: Deploy Dashboard
-        run: kubectl apply -f ./k8s/dashboard.yml
+        run: kubectl apply -f ./k8s/dashboard.yaml
 
       - name: Deploy data-service
-        run: kubectl apply -f ./k8s/data-service.yml
+        run: kubectl apply -f ./k8s/data-service.yaml
 
       - name: Deploy nlp-service
-        run: kubectl apply -f ./k8s/nlp-service.yml
+        run: kubectl apply -f ./k8s/nlp-service.yaml
 
       - name: Verify rollout
         run: |
