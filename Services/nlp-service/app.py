@@ -64,7 +64,7 @@ def save_sentiment(text: str, label: str, score: float):
 def health():
     return jsonify({"message": "Service is healthy"}), 200
 
-#Route for analyze
+#Route for analyze sentiments
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
