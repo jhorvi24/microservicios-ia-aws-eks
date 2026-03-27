@@ -9,7 +9,7 @@ on:
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: customer-analysis-cluster
-  ECR_REGISTRY: 851725415355.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: 211125559404.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
 
