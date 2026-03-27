@@ -8,7 +8,7 @@ metadata:
 
 # AWS Academy: Use LabRole for cluster and nodes
 iam:
-  serviceRoleARN: arn:aws:iam::851725415355:role/c193145a4965754l14361878t1w851725-LabEksClusterRole-EP8Zago2V8Q9
+  serviceRoleARN: arn:aws:iam::211125559404:role/c204605a5216167l14425323t1w211125-LabEksClusterRole-E3y3HOFIXQFi
 
 managedNodeGroups:
   - name: ai-nodes
@@ -19,7 +19,7 @@ managedNodeGroups:
     volumeSize: 30
     # AWS Academy: Use LabRole for node group
     iam:
-      instanceRoleARN: arn:aws:iam::851725415355:role/c193145a4965754l14361878t1w851725415-LabEksNodeRole-mpXW4QAT0Uby
+      instanceRoleARN: arn:aws:iam::211125559404:role/c204605a5216167l14425323t1w211125559-LabEksNodeRole-kXfaOiQ9Zmzw
     tags:
       Project: AI-Cluster
       Environment: Lab
